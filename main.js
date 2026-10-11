@@ -19,7 +19,7 @@ scene.fog = new THREE.Fog(0xcfe3d0, 22, 70);
 
 const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.05, 250);
 const CAM_START = new THREE.Vector3(2.4, 2.1, 3.3);
-const TARGET = new THREE.Vector3(0, 1.35, 0);
+const TARGET = new THREE.Vector3(0, 1.6, 0);
 // keep the cube comfortably in frame on narrow (portrait) screens
 function fitCamera() {
   const a = window.innerWidth / window.innerHeight;
@@ -29,7 +29,7 @@ function fitCamera() {
 fitCamera();
 
 const TABLE_Y = 0.78;          // table top height
-const CUBE_Y = 1.45;           // floating cube centre
+const CUBE_Y = 1.75;           // floating cube centre
 const SUN_DIR = new THREE.Vector3(5, 9, 3).normalize();
 
 /* ------------------------------------------------------------------ *
