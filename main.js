@@ -370,12 +370,90 @@ scene.add(cubeCam);
  *  Scene render target (what the glass refracts)
  * ------------------------------------------------------------------ */
 const sceneRT = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+// full frame (colour + depth) that the depth-of-field pass blurs
+const finalRT = new THREE.WebGLRenderTarget(1, 1, {
+  type: THREE.HalfFloatType,
+  samples: 4,
+  depthTexture: new THREE.DepthTexture(1, 1),
+});
 const drawSize = new THREE.Vector2();
 function sizeRT() {
   renderer.getDrawingBufferSize(drawSize);
   sceneRT.setSize(drawSize.x, drawSize.y);
+  finalRT.setSize(drawSize.x, drawSize.y);
 }
 sizeRT();
+
+/* ------------------------------------------------------------------ *
+ *  Depth of field: the cube stays sharp, everything nearer / further
+ *  gets a soft bokeh blur, plus a gentle blur toward the screen edges
+ * ------------------------------------------------------------------ */
+const dofMat = new THREE.ShaderMaterial({
+  depthTest: false,
+  depthWrite: false,
+  uniforms: {
+    tColor: { value: finalRT.texture },
+    tDepth: { value: finalRT.depthTexture },
+    uRes: { value: drawSize },
+    uNear: { value: camera.near },
+    uFar: { value: camera.far },
+    uFocus: { value: 4 },
+    uFocusRange: { value: 0.85 },
+    uStrength: { value: 1.6 },
+    uMaxR: { value: 12 },
+    uEdge: { value: 0.45 },
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+  fragmentShader: /* glsl */ `
+    #include <packing>
+    uniform sampler2D tColor;
+    uniform sampler2D tDepth;
+    uniform vec2 uRes;
+    uniform float uNear, uFar, uFocus, uFocusRange, uStrength, uMaxR, uEdge;
+    varying vec2 vUv;
+
+    float coc(vec2 uv){
+      float z = -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, uNear, uFar);
+      float c = max(abs(z - uFocus) - uFocusRange, 0.0) / z * uStrength;
+      vec2 p = uv - 0.5;
+      p.x *= uRes.x / uRes.y;
+      float edge = smoothstep(0.38, 0.95, length(p)) * uEdge;
+      return clamp(max(c, edge), 0.0, 1.0);
+    }
+
+    void main(){
+      float c0 = coc(vUv);
+      float R = c0 * uMaxR;
+      vec3 acc = texture2D(tColor, vUv).rgb;
+      float wsum = 1.0;
+      if (R > 0.5) {
+        const int N = 56;
+        for (int i = 0; i < N; i++) {
+          float fi = float(i);
+          float r = sqrt((fi + 0.5) / float(N));
+          float a = fi * 2.39996323;
+          vec2 o = vec2(cos(a), sin(a)) * r * R;
+          vec2 suv = vUv + o / uRes;
+          // only gather from samples that are themselves blurry enough to
+          // reach this pixel, so the sharp cube never bleeds into the bokeh
+          float w = clamp(coc(suv) * uMaxR - r * R + 1.0, 0.0, 1.0);
+          acc += texture2D(tColor, suv).rgb * w;
+          wsum += w;
+        }
+      }
+      gl_FragColor = vec4(acc / wsum, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+});
+const dofScene = new THREE.Scene();
+const dofQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), dofMat);
+dofQuad.frustumCulled = false;
+dofScene.add(dofQuad);
+const dofCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+let dofOn = true;
 
 /* ------------------------------------------------------------------ *
  *  The dichroic glass cube
@@ -640,6 +718,12 @@ function applyRotation(v) {
   cube.quaternion.premultiply(tmpQ);
 }
 
+const blurBtn = document.getElementById('blur');
+blurBtn.addEventListener('click', () => {
+  dofOn = !dofOn;
+  blurBtn.textContent = dofOn ? '블러 끄기' : '블러 켜기';
+});
+
 document.getElementById('reset').addEventListener('click', () => {
   fitCamera();
   controls.target.copy(TARGET);
@@ -712,10 +796,16 @@ function animate() {
   renderer.setRenderTarget(sceneRT);
   renderer.render(scene, camera);
 
-  // pass 2: full scene to screen, front faces refract pass 1
+  // pass 2: full scene, front faces refract pass 1
   camera.layers.enable(1);
-  renderer.setRenderTarget(null);
+  renderer.setRenderTarget(finalRT);
   renderer.render(scene, camera);
+
+  // pass 3: depth of field to screen (focus locked on the cube)
+  dofMat.uniforms.uFocus.value = camera.position.distanceTo(cube.position);
+  dofMat.uniforms.uMaxR.value = dofOn ? 12 * renderer.getPixelRatio() : 0;
+  renderer.setRenderTarget(null);
+  renderer.render(dofScene, dofCam);
 
   requestAnimationFrame(animate);
 }

@@ -53,10 +53,14 @@ html, body {
 }
 .hint b { font-weight: 600; margin-right: 4px; }
 
-.reset {
+.buttons {
   position: fixed;
   top: 20px;
   right: 24px;
+  display: flex;
+  gap: 8px;
+}
+.btn {
   font: inherit;
   font-size: 13px;
   padding: 8px 14px;
@@ -68,7 +72,7 @@ html, body {
   color: inherit;
   cursor: pointer;
 }
-.reset:hover { background: rgba(255, 255, 255, 0.8); }
+.btn:hover { background: rgba(255, 255, 255, 0.8); }
 
 .loading {
   position: fixed;
@@ -84,7 +88,7 @@ html, body {
 
 @media (max-width: 600px) {
   .title { top: 14px; left: 16px; }
-  .reset { top: 14px; right: 16px; }
+  .buttons { top: 14px; right: 16px; }
   .hint { bottom: 14px; }
   .hint span { font-size: 11px; padding: 6px 10px; }
 }
