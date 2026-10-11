@@ -399,7 +399,7 @@ const dofMat = new THREE.ShaderMaterial({
     uFar: { value: camera.far },
     uFocus: { value: 4 },
     uFocusRange: { value: 0.85 },
-    uStrength: { value: 1.6 },
+    uStrength: { value: 2.0 },
     uMaxR: { value: 12 },
     uEdge: { value: 0.45 },
   },
@@ -803,7 +803,7 @@ function animate() {
 
   // pass 3: depth of field to screen (focus locked on the cube)
   dofMat.uniforms.uFocus.value = camera.position.distanceTo(cube.position);
-  dofMat.uniforms.uMaxR.value = dofOn ? 12 * renderer.getPixelRatio() : 0;
+  dofMat.uniforms.uMaxR.value = dofOn ? 16 * renderer.getPixelRatio() : 0;
   renderer.setRenderTarget(null);
   renderer.render(dofScene, dofCam);
 
