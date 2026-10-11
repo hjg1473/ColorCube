@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Color Cube</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <header class="title">
+    <h1>Color Cube</h1>
+    <p>Dichroic glass prism</p>
+  </header>
+
+  <div class="hint">
+    <span><b>좌클릭 드래그</b> 큐브 회전</span>
+    <span><b>클릭</b> 큐브 튕기기</span>
+    <span><b>우클릭 드래그</b> 시점 회전</span>
+    <span><b>휠</b> 확대 / 축소</span>
+  </div>
+
+  <button id="reset" class="reset" type="button">시점 초기화</button>
+
+  <div id="loading" class="loading">Loading…</div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
