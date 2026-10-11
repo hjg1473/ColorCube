@@ -9,7 +9,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'hi
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 0.95;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 app.appendChild(renderer.domElement);
@@ -20,7 +20,13 @@ scene.fog = new THREE.Fog(0xcfe3d0, 22, 70);
 const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.05, 250);
 const CAM_START = new THREE.Vector3(2.4, 2.1, 3.3);
 const TARGET = new THREE.Vector3(0, 1.35, 0);
-camera.position.copy(CAM_START);
+// keep the cube comfortably in frame on narrow (portrait) screens
+function fitCamera() {
+  const a = window.innerWidth / window.innerHeight;
+  const k = a < 1 ? Math.pow(1 / a, 0.75) : 1;
+  camera.position.copy(TARGET).add(CAM_START.clone().sub(TARGET).multiplyScalar(k));
+}
+fitCamera();
 
 const TABLE_Y = 0.78;          // table top height
 const CUBE_Y = 1.45;           // floating cube centre
@@ -444,7 +450,7 @@ const frontMat = new THREE.ShaderMaterial({
       vec3 dich = hsv2rgb(vec3(hue, 0.88, 1.0));
       vec3 comp = hsv2rgb(vec3(fract(hue + 0.5), 0.75, 1.0));
 
-      vec3 trans = refr * mix(vec3(1.0), dich * 1.35, 0.78);
+      vec3 trans = refr * mix(vec3(1.0), dich, 0.93) * 1.2;
 
       // --- reflection of the real surroundings ---
       vec3 R = reflect(-V, N);
@@ -452,15 +458,15 @@ const frontMat = new THREE.ShaderMaterial({
       float F = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
       vec3 refl = env * mix(comp, vec3(1.0), 0.35);
 
-      vec3 col = trans + dich * 0.06;
-      col = mix(col, refl, clamp(F * 1.1 + 0.06, 0.0, 1.0));
+      vec3 col = trans + dich * 0.035;
+      col = mix(col, refl, clamp(F * 1.0 + 0.035, 0.0, 1.0));
 
       // --- bright polished edges ---
       vec2 e = min(vUv, 1.0 - vUv);
       float ed = min(e.x, e.y);
-      float edge = 1.0 - smoothstep(0.0, 0.018, ed);
+      float edge = 1.0 - smoothstep(0.0, 0.012, ed);
       float edge2 = 1.0 - smoothstep(0.0, 0.07, ed);
-      col += edge * (vec3(0.55) + comp * 0.6) + edge2 * dich * 0.12;
+      col += edge * (vec3(0.3) + comp * 0.4) + edge2 * dich * 0.1;
 
       // --- sun glint ---
       vec3 H = normalize(uSun + V);
@@ -495,8 +501,8 @@ const backMat = new THREE.ShaderMaterial({
       vec2 e = min(vUv, 1.0 - vUv);
       float edge = 1.0 - smoothstep(0.0, 0.02, min(e.x, e.y));
       // internal reflection is strongest at grazing angles
-      float a = 0.30 + 0.35 * pow(1.0 - ndv, 2.0) + edge * 0.5;
-      vec3 col = dich * (0.85 + 0.6 * pow(1.0 - ndv, 3.0)) + edge * 0.6;
+      float a = 0.42 + 0.35 * pow(1.0 - ndv, 2.0) + edge * 0.4;
+      vec3 col = dich * (0.7 + 0.5 * pow(1.0 - ndv, 3.0)) + edge * 0.35;
       gl_FragColor = vec4(col, a);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
@@ -635,7 +641,7 @@ function applyRotation(v) {
 }
 
 document.getElementById('reset').addEventListener('click', () => {
-  camera.position.copy(CAM_START);
+  fitCamera();
   controls.target.copy(TARGET);
   controls.update();
 });
